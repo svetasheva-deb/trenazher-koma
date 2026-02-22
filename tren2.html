@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логіка Світла: Мега-Тренажер</title>
+    <style>
+        body { background: #eef2f3; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .box { background: white; width: 100%; max-width: 450px; padding: 30px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 5px solid #3498db; text-align: center; }
+        .score-panel { text-align: right; margin-bottom: 10px; font-weight: bold; color: #2980b9; font-size: 16px; }
+        .q { font-size: 42px; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
+        .sub-q { font-size: 20px; color: #7f8c8d; margin-bottom: 25px; }
+        input { width: 80%; padding: 15px; font-size: 28px; border: 3px solid #dee2e6; border-radius: 15px; text-align: center; outline: none; transition: 0.3s; margin-bottom: 15px; }
+        input:focus { border-color: #3498db; box-shadow: 0 0 10px rgba(52,152,219,0.3); }
+        button { background: #3498db; color: white; border: none; padding: 18px; width: 100%; border-radius: 15px; font-size: 20px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; }
+        button:hover { background: #2980b9; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        #msg { height: 50px; margin-top: 15px; font-size: 26px; font-weight: bold; }
+        .hint { display: none; font-size: 15px; color: #444; margin-top: 20px; background: #fff9db; padding: 15px; border-radius: 12px; border-left: 6px solid #f1c40f; text-align: left; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <div class="score-panel">🔥 Бали: <span id="score">0</span> </div>
+    <div id="q" class="q">---</div>
+    <div id="sub" class="sub-q">Завантаження...</div>
+    <input type="text" id="ans" placeholder="0.00" autofocus>
+    <div id="msg"></div>
+    <button onclick="check()">ПЕРЕВІРИТИ ✅</button>
+    <button onclick="next()" id="nextBtn" style="background:#27ae60; display:none; margin-top:10px;">НАСТУПНЕ ЗАВДАННЯ ➜</button>
+    <div id="hint" class="hint"></div>
+</div>
+
+<script>
+    const data = [
+        // ПЛОЩА
+        { q: "200 см²", a: "0.02", u: "у м²", h: "В 1 м² = 10 000 см² (4 нулі!). Кома на 4 кроки наліво: 200 ➜ 20.0 ➜ 2.00 ➜ 0.200 ➜ 0.02" },
+        { q: "100 м²", a: "0.01", u: "у гектарах (га)", h: "В 1 га = 10 000 м² (4 нулі). Кома на 4 кроки наліво." },
+        { q: "1 см²", a: "0.0001", u: "у м²", h: "В 1 м² = 10 000 см². Має бути 4 знаки після коми!" },
+        // ДОВЖИНА ТА ВАГА (НОВІ)
+        { q: "600 м", a: "0.6", u: "у км", h: "В 1 км = 1000 м (3 нулі). Кома йде на 3 кроки наліво." },
+        { q: "45 мм", a: "4.5", u: "у см", h: "В 1 см = 10 мм (1 нуль). Відрахуй 1 цифру наліво." },
+        { q: "2.5 кг", a: "2500", u: "у грамах (г)", h: "Навпаки! В 1 кг = 1000 г. Кома йде на 3 кроки ВПРАВО: 2.5 ➜ 25 ➜ 250 ➜ 2500" },
+        { q: "17 ц", a: "1.7", u: "у тоннах (т)", h: "В 1 т = 10 ц (1 нуль). Кома йде на 1 крок наліво." },
+        { q: "380 см", a: "3.8", u: "у метрах (м)", h: "В 1 м = 100 см (2 нулі). Кома йде на 2 кроки наліво." },
+        { q: "0.5 км", a: "500", u: "у метрах (м)", h: "В 1 км = 1000 м. Кома йде на 3 кроки ВПРАВО: 0.5 ➜ 5 ➜ 50 ➜ 500" },
+        { q: "90 кг", a: "0.9", u: "у центнерах (ц)", h: "В 1 ц = 100 кг (2 нулі). Кома йде на 2 кроки наліво." },
+        { q: "1.2 см", a: "12", u: "у міліметрах (мм)", h: "В 1 см = 10 мм. Кома йде на 1 крок ВПРАВО: 1.2 ➜ 12" },
+        { q: "750 г", a: "0.75", u: "у кілограмах (кг)", h: "В 1 кг = 1000 г (3 нулі). Кома йде на 3 кроки наліво." },
+        { q: "6 дм", a: "60", u: "у сантиметрах (см)", h: "В 1 дм = 10 см. Кома йде на 1 крок ВПРАВО: 6 ➜ 60" },
+        // ПОПЕРЕДНІ
+        { q: "50 см", a: "0.5", u: "у метрах (м)", h: "1 м = 100 см (2 нулі). Кома на 2 кроки наліво." },
+        { q: "800 кг", a: "0.8", u: "у тоннах (т)", h: "1 т = 1000 кг (3 нулі). Кома на 3 кроки наліво." },
+        { q: "1250 кг", a: "1.25", u: "у тоннах (т)", h: "1 т = 1000 кг. Кома на 3 кроки наліво: 1250 ➜ 1.25" },
+        { q: "0.3 м", a: "30", u: "у сантиметрах (см)", h: "Кома йде на 2 кроки ВПРАВО: 0.3 ➜ 3.0 ➜ 30" },
+        { q: "0.2 кг", a: "200", u: "у грамах (г)", h: "Кома йде на 3 кроки ВПРАВО: 0.2 ➜ 2 ➜ 20 ➜ 200" },
+        { q: "15 мм²", a: "0.15", u: "у см²", h: "В 1 см² = 100 мм² (2 нулі). Кома на 2 кроки наліво." },
+        { q: "40 дм²", a: "0.4", u: "у м²", h: "В 1 м² = 100 дм² (2 нулі). Кома на 2 кроки наліво." },
+        { q: "5 см", a: "0.05", u: "у метрах (м)", h: "В 1 м = 100 см (2 нулі). Кома на 2 кроки наліво: 5 ➜ 0.5 ➜ 0.05" },
+        { q: "12 г", a: "0.012", u: "у кілограмах (кг)", h: "В 1 кг = 1000 г (3 нулі). Кома на 3 кроки наліво: 12 ➜ 1.2 ➜ 0.12 ➜ 0.012" },
+        { q: "0.7 т", a: "7", u: "у центнерах (ц)", h: "В 1 т = 10 ц. Кома на 1 крок ВПРАВО: 0.7 ➜ 7" },
+        { q: "4 м", a: "0.04", u: "у центнерах (ц) за вагою?", a: "0.04", h: "Помилка в питанні? Давайте замінимо: 4 кг у центнери. Кома на 2 кроки: 0.04" },
+        { q: "9 см", a: "0.9", u: "у дециметрах (дм)", h: "1 дм = 10 см. Кома на 1 крок наліво." },
+        { q: "0.05 км", a: "50", u: "у метрах (м)", h: "В 1 км = 1000 м. Кома на 3 кроки ВПРАВО: 0.05 ➜ 0.5 ➜ 5 ➜ 50" },
+        { q: "300 мм", a: "3", u: "у дециметрах (дм)", h: "В 1 дм = 100 мм (2 нулі). Кома на 2 кроки наліво: 300 ➜ 3" }
+    ];
+
+    // ... (попередній код масиву data залишається без змін)
+
+    let score = 0;
+    let currentTask;
+
+    function shuffle() {
+        let nextIndex;
+        do { nextIndex = Math.floor(Math.random() * data.length); } 
+        while (data[nextIndex] === currentTask);
+        currentTask = data[nextIndex];
+    }
+
+    function updateDisplay() {
+        document.getElementById('q').innerText = currentTask.q;
+        document.getElementById('sub').innerText = "Скільки це " + currentTask.u + "?";
+        document.getElementById('hint').innerText = "💡 " + currentTask.h;
+        document.getElementById('hint').style.display = "none";
+        document.getElementById('ans').focus();
+    }
+
+    function check() {
+        let v = document.getElementById('ans').value.replace(',', '.').trim();
+        let m = document.getElementById('msg');
+        let nextBtn = document.getElementById('nextBtn');
+        let hBox = document.getElementById('hint');
+        
+        if (v !== "" && parseFloat(v) === parseFloat(currentTask.a)) {
+            m.innerHTML = "🎯 ПРАВИЛЬНО!"; m.style.color = "#27ae60";
+            score++;
+            document.getElementById('score').innerText = score;
+            nextBtn.style.display = "block";
+            document.getElementById('ans').disabled = true;
+            hBox.style.display = "none";
+        } else {
+            m.innerHTML = "❌ ПОМИЛКА!"; m.style.color = "#e74c3c";
+            hBox.style.display = "block";
+        }
+    }
+
+    function next() {
+        shuffle();
+        updateDisplay();
+        document.getElementById('ans').value = "";
+        document.getElementById('ans').disabled = false;
+        document.getElementById('msg').innerText = "";
+        document.getElementById('nextBtn').style.display = "none";
+    }
+
+    // Слухаємо кнопку Enter
+    document.getElementById('ans').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            if (document.getElementById('nextBtn').style.display === "block") {
+                next();
+            } else {
+                check();
+            }
+        }
+    });
+
+    // ЦІ РЯДКИ МАЮТЬ БУТИ ВСЕРЕДИНІ ТЕГУ SCRIPT, ПЕРЕД ЙОГО ЗАКРИТТЯМ
+    shuffle();
+    updateDisplay();
+</script>
+
+</body>
+</html>
